@@ -5,9 +5,11 @@
       :aria-expanded="isOpen ? 'true' : 'false'"
       aria-haspopup="listbox"
       :aria-owns="`${componentAttrIdAutosuggest}-${componentAttrPrefix}__results`"
-    ><input
+    ><component
+      :is="internal_inputProps.is"
+      ref="textComponent"
       :type="internal_inputProps.type"
-      :value="internalValue"
+      :value.prop="internalValue"
       :autocomplete="internal_inputProps.autocomplete"
       :class="[isOpen ? `${componentAttrPrefix}__input--open` : '', internal_inputProps['class']]"
       v-bind="internal_inputProps"
@@ -17,71 +19,81 @@
       @input="inputHandler"
       @keydown="handleKeyStroke"
       v-on="listeners"
-    ></div><slot name="after-input" />
-    <div
-      :id="`${componentAttrIdAutosuggest}-${componentAttrPrefix}__results`"
-      :class="_componentAttrClassAutosuggestResultsContainer"
+    /></div><slot name="after-input" />
+    <mounting-portal
+      :mount-to="resultsContainer"
+      :name="resultsContainer"
+      append
+      slim
+      target-slim
     >
       <div
-        v-if="isOpen"
-        :class="_componentAttrClassAutosuggestResults"
-        :aria-labelledby="componentAttrIdAutosuggest"
+        :id="`${componentAttrIdAutosuggest}-${componentAttrPrefix}__results`"
+        ref="autosuggestResults"
+        :class="_componentAttrClassAutosuggestResultsContainer"
+        :style="resultsStyle"
       >
-        <slot name="before-suggestions" />
-        <component
-          :is="cs.type"
-          v-for="(cs, key) in computedSections"
-          :ref="getSectionRef(`${cs.name}${key}`)"
-          :key="getSectionRef(`${cs.name}${key}`)"
-          :current-index="currentIndex"
-          :normalize-item-function="normalizeItem"
-          :render-suggestion="renderSuggestion"
-          :section="cs"
-          :component-attr-prefix="componentAttrPrefix"
-          :component-attr-id-autosuggest="componentAttrIdAutosuggest"
-          @updateCurrentIndex="updateCurrentIndex"
+        <div
+          v-if="isOpen"
+          :class="_componentAttrClassAutosuggestResults"
+          :aria-labelledby="componentAttrIdAutosuggest"
         >
-          <template
-            :slot="`before-section-${cs.name || cs.label}`"
-            slot-scope="{section, className}"
+          <slot name="before-suggestions" />
+          <component
+            :is="cs.type"
+            v-for="(cs, key) in computedSections"
+            :ref="getSectionRef(`${cs.name}${key}`)"
+            :key="getSectionRef(`${cs.name}${key}`)"
+            :current-index="currentIndex"
+            :normalize-item-function="normalizeItem"
+            :render-suggestion="renderSuggestion"
+            :section="cs"
+            :component-attr-prefix="componentAttrPrefix"
+            :component-attr-id-autosuggest="componentAttrIdAutosuggest"
+            @updateCurrentIndex="updateCurrentIndex"
           >
-            <slot
-              :name="`before-section-${cs.name || cs.label}`"
-              :section="section"
-              :className="className"
-            />
-          </template>
-          <template slot-scope="{ suggestion, _key }">
-            <slot
-              :suggestion="suggestion"
-              :index="_key"
+            <template
+              :slot="`before-section-${cs.name || cs.label}`"
+              slot-scope="{section, className}"
             >
-              {{ suggestion.item }}
-            </slot>
-          </template>
-          <template
-            :slot="`after-section-${cs.name || cs.label}`"
-            slot-scope="{section}"
-          >
-            <slot
-              :name="`after-section-${cs.name || cs.label}`"
-              :section="section"
-            />
-          </template>
-          <template
-            slot="after-section"
-            slot-scope="{section}"
-          >
-            <slot
-              name="after-section"
-              :section="section"
-            />
-          </template>
-        </component>
-        <slot name="after-suggestions" />
+              <slot
+                :name="`before-section-${cs.name || cs.label}`"
+                :section="section"
+                :className="className"
+              />
+            </template>
+            <template slot-scope="{ suggestion, _key }">
+              <slot
+                :suggestion="suggestion"
+                :index="_key"
+              >
+                {{ suggestion.item }}
+              </slot>
+            </template>
+            <template
+              :slot="`after-section-${cs.name || cs.label}`"
+              slot-scope="{section}"
+            >
+              <slot
+                :name="`after-section-${cs.name || cs.label}`"
+                :section="section"
+              />
+            </template>
+            <template
+              slot="after-section"
+              slot-scope="{section}"
+            >
+              <slot
+                name="after-section"
+                :section="section"
+              />
+            </template>
+          </component>
+          <slot name="after-suggestions" />
+        </div>
+        <slot name="after-suggestions-container" />
       </div>
-      <slot name="after-suggestions-container" />
-    </div>
+    </mounting-portal>
   </div>
 </template>
 
@@ -109,7 +121,7 @@
  */
 
 import DefaultSection from "./parts/DefaultSection.js";
-import { addClass, removeClass } from "./utils";
+import { addClass, removeClass, positionMenuAtCaret } from "./utils";
 
 const INDEX_IS_FOCUSED_ON_INPUT = -1
 
@@ -204,7 +216,12 @@ export default {
       type: String,
       required: false,
       default: "autosuggest"
-    }
+    },
+    resultsContainer: {
+      type: String,
+      required: false,
+      default: 'body',
+    },
   },
   data() {
     return {
@@ -221,7 +238,9 @@ export default {
         autocomplete: "off",
       },
       /** @type Number */
-      clientXMouseDownInitial: null
+      clientXMouseDownInitial: null,
+      resultsStyle: '',
+      focus: false,
     };
   },
   computed: {
@@ -247,6 +266,7 @@ export default {
         click: () => {
           /* eslint-disable-next-line vue/no-side-effects-in-computed-properties */
           this.loading = false;
+          this.setFocus(true);
           this.$listeners.click && this.$listeners.click(this.currentItem);
           this.$nextTick(() => {
             this.ensureItemVisible(this.currentItem, this.currentIndex);
@@ -279,7 +299,7 @@ export default {
      * @returns {Boolean}
      */
     isOpen() {
-      return this.shouldRenderSuggestions(this.totalResults, this.loading)
+      return this.focus && this.shouldRenderSuggestions(this.totalResults, this.loading)
     },
     /**
      * Normalize suggestions into sections based on defaults and section
@@ -368,9 +388,17 @@ export default {
         if (newValue !== oldValue) {
           this.$emit(newValue ? 'opened' : 'closed');
         }
+        // Calculates the styles for the results menu once 'isOpen' is true and
+        // renders results menu next to the cursor position or if a cursor position is too close to the screen edges the next best position
+        if (newValue) {
+          this.resultsStyle = positionMenuAtCaret(
+            this.$refs.textComponent,
+            this.internal_inputProps.position,
+          );
+        }
       },
       immediate: true
-    }
+    },
   },
   created() {
     this.loading = true;
@@ -392,6 +420,7 @@ export default {
       const newValue = e.target.value
       this.$emit('input', newValue)
       this.internalValue = newValue
+      this.setFocus(true);
       if (!this.didSelectFromOptions) {
         this.searchInputOriginal = newValue;
         this.currentIndex = null;
@@ -460,27 +489,27 @@ export default {
       const wasClosed = !this.isOpen
       this.loading = false;
       this.didSelectFromOptions = false;
-      if (this.isOpen) {
+      if (this.isOpen || [37, 39].includes(keyCode)) {
         switch (keyCode) {
           case 40: // ArrowDown
           case 38: // ArrowUp
             e.preventDefault();
-            if (keyCode === 38 && this.currentIndex === null) {
-              break;
-            }
             // Determine direction of arrow up/down and determine new currentIndex
             const direction = keyCode === 40 ? 1 : -1;
             const newIndex = Math.max((parseInt(this.currentIndex) || 0) + (wasClosed ? 0 : direction), INDEX_IS_FOCUSED_ON_INPUT);
 
-            this.setCurrentIndex(newIndex, this.totalResults);
+            if (keyCode === 38 && (this.currentIndex === null || this.currentIndex === 0)) {
+              this.setCurrentIndex(this.totalResults - 1, this.totalResults);
+            } else if (keyCode === 40 && (this.currentIndex >= this.totalResults || this.currentIndex === null)) {
+              this.setCurrentIndex(0, this.totalResults);
+            } else {
+              this.setCurrentIndex(newIndex, this.totalResults);
+            }
+
             this.didSelectFromOptions = true;
-            if (this.totalResults > 0 && this.currentIndex >= 0) {
+            if (this.totalResults > 0) {
               this.setChangeItem(this.getItemByIndex(this.currentIndex));
               this.didSelectFromOptions = true;
-            } else if (this.currentIndex === INDEX_IS_FOCUSED_ON_INPUT) {
-              this.setChangeItem(null)
-              this.internalValue = this.searchInputOriginal;
-              e.preventDefault();
             }
 
             this.$nextTick(() => {
@@ -499,15 +528,17 @@ export default {
             this.listeners.selected(this.didSelectFromOptions);
             break;
           case 27: // Escape
-            /**
-             * For 'search' input type, make sure the browser doesn't clear the
-             * input when Escape is pressed.
-             */
+            this.setFocus(false);
             this.loading = true;
             this.currentIndex = null;
-            this.internalValue = this.searchInputOriginal;
-            this.$emit('input', this.searchInputOriginal);
             e.preventDefault();
+            break;
+          case 37: // ArrowLeft
+          case 39: // ArrowRight
+            /**
+             * make sure that focus is set when the user is navigating with left and right arrow keys
+             */
+            this.setFocus(true);
             break;
         }
       }
@@ -559,8 +590,8 @@ export default {
      * @param {String} selector - selector of item that is overflowed
      */
     ensureItemVisible(item, index, selector) {
-      const resultsScrollElement = this.$el.querySelector(
-        selector || `.${this._componentAttrClassAutosuggestResults}`
+      const resultsScrollElement = document.querySelector(
+        `${this.resultsContainer} ${selector || `.${this._componentAttrClassAutosuggestResults}`}`
       );
 
       if (!resultsScrollElement) {
@@ -602,7 +633,7 @@ export default {
      *   results e.g. an offset of clientX
      */
     clickedOnScrollbar(e, mouseX){
-      const results = this.$el.querySelector(`.${this._componentAttrClassAutosuggestResults}`);
+      const results = document.querySelector(`${this.resultsContainer} .${this._componentAttrClassAutosuggestResults}`);
 
       const mouseIsInsideScrollbar = results && results.clientWidth <= (mouseX + 17) &&
         mouseX + 17 <= results.clientWidth + 34
@@ -623,12 +654,17 @@ export default {
      */
     onDocumentMouseUp(e) {
       /** Do not re-render list on input click  */
-      const isChild = this.$el.contains(e.target);
+      const results = document.querySelector(`${this.resultsContainer} .${this._componentAttrClassAutosuggestResults}`)
+      const isChild =
+          this.$el.contains(e.target) ||
+          (!!results ? results.contains(e.target) : false);
 
       /* Clicks outside of dropdown */
       if (!isChild) {
         this.loading = true;
         this.currentIndex = null;
+        this.setFocus(false);
+        this.$emit('click-outside')
         return;
       }
 
@@ -659,9 +695,8 @@ export default {
        * we need to make sure that we adjust for the limits.
        */
       if (!onHover){
-        const hitLowerLimt = this.currentIndex === null
         const hitUpperLimit = newIndex >= limit
-        if (hitLowerLimt || hitUpperLimit) {
+        if (hitUpperLimit) {
           adjustedValue = 0;
         }
       }
@@ -676,7 +711,15 @@ export default {
       if (element) {
         addClass(element, hoverClass);
       }
-    }
+    },
+    /**
+       * Sets the focus state of the component
+       * if state is 'false', the menu with results will be closed.
+       * @param {Boolean} state - state to set
+       */
+      setFocus(state) {
+        this.focus = state;
+      },
   },
 };
 </script>

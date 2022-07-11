@@ -22,7 +22,6 @@
     "test:update": "yarn test --updateSnapshot",
     "add-contributor": "kcd-scripts contributors add",
     "setup": "yarn install",
-    "precommit": "yarn test",
     "storybook": "start-storybook -p 9001 -c .storybook -s ./.storybook/public",
     "storybook:build": "build-storybook -c .storybook -o docs/storybook"
   },
@@ -137,5 +136,8 @@
       "!**/.test.js"
     ],
     "testURL": "http://localhost"
+  },
+  "dependencies": {
+    "portal-vue": "^2.1.7"
   }
 }
