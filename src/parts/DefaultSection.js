@@ -69,7 +69,7 @@ const DefaultSection = {
         this.list.map((val, key) => {
           const item = this.normalizeItemFunction(this.section.name, this.section.type, this.section.label, this.section.liClass, val)
           const itemIndex = this.getItemIndex(key)
-          const isHighlighted = this._currentIndex === itemIndex || parseInt(this.currentIndex) === itemIndex
+          const isHighlighted = parseInt(this.currentIndex) === itemIndex
 
           return h(
             "li",
