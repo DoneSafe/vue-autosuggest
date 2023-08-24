@@ -21,6 +21,7 @@
       v-on="listeners"
     /></div><slot name="after-input" />
     <mounting-portal
+      v-if="isOpen"
       :mount-to="resultsContainer"
       :name="resultsContainer"
       append
