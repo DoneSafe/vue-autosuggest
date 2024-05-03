@@ -15,7 +15,7 @@
       v-bind="internal_inputProps"
       aria-autocomplete="list"
       :aria-activedescendant="isOpen && currentIndex !== null ? `${componentAttrPrefix}__results-item--${currentIndex}` : ''"
-      :aria-controls="`${componentAttrIdAutosuggest}-${componentAttrPrefix}__results`"
+      :aria-controls="isOpen ? `${componentAttrIdAutosuggest}-${componentAttrPrefix}__results` : ''"
       @input="inputHandler"
       @keydown="handleKeyStroke"
       v-on="listeners"
