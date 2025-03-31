@@ -1,5 +1,7 @@
+import { h } from 'vue';
+
 const DefaultSection = {
-  name: "default-section",
+  name: 'default-section',
   props: {
     /** @type ResultSection */
     section: { type: Object, required: true },
@@ -7,13 +9,13 @@ const DefaultSection = {
     renderSuggestion: { type: Function, required: false },
     normalizeItemFunction: { type: Function, required: true },
     componentAttrPrefix: { type: String, required: true },
-    componentAttrIdAutosuggest: { type: String, required: true }
+    componentAttrIdAutosuggest: { type: String, required: true },
   },
   data: function () {
     return {
       /** @type Number */
-      _currentIndex: this.currentIndex
-    }
+      _currentIndex: this.currentIndex,
+    };
   },
   computed: {
     /**
@@ -25,91 +27,102 @@ const DefaultSection = {
         limit = data.length;
       }
       return data.slice(0, limit);
-    }
+    },
   },
   methods: {
-    getItemIndex (i) {
+    getItemIndex(i) {
       return this.section.start_index + i;
     },
-    getItemByIndex (i) {
+    getItemByIndex(i) {
       return this.section.data[i];
     },
-    onMouseEnter (event) {
-      const idx = parseInt(event.currentTarget.getAttribute("data-suggestion-index"))
-      this._currentIndex = idx
-      this.$emit('updateCurrentIndex', idx)
+    onMouseEnter(event) {
+      const idx = parseInt(event.currentTarget.getAttribute('data-suggestion-index'));
+      this._currentIndex = idx;
+      this.$emit('update-current-index', idx);
     },
-    onMouseLeave () {
-      this.$emit('updateCurrentIndex', null)
-    }
+    onMouseLeave() {
+      this.$emit('update-current-index', null);
+    },
   },
   // eslint-disable-next-line no-unused-vars
-  render (h) {
-    const componentAttrPrefix = this.componentAttrPrefix
+  render() {
+    const componentAttrPrefix = this.componentAttrPrefix;
     const slots = {
-      beforeSection: this.$scopedSlots[`before-section-${this.section.name}`],
-      afterSectionDefault: this.$scopedSlots[`after-section`],
-      afterSectionNamed: this.$scopedSlots[`after-section-${this.section.name}`]
-    }
+      beforeSection: this.$slots[`before-section-${this.section.name}`],
+      afterSectionDefault: this.$slots[`after-section`],
+      afterSectionNamed: this.$slots[`after-section-${this.section.name}`],
+    };
 
-    const beforeClassName = `${componentAttrPrefix}__results-before ${componentAttrPrefix}__results-before--${this.section.name}`
-    const before = slots.beforeSection && slots.beforeSection({
-      section: this.section,
-      className: beforeClassName
-    }) || []
+    const beforeClassName = `${componentAttrPrefix}__results-before ${componentAttrPrefix}__results-before--${this.section.name}`;
+    const before =
+      (slots.beforeSection &&
+        slots.beforeSection({
+          section: this.section,
+          className: beforeClassName,
+        })) ||
+      [];
 
     return h(
-      "ul",
+      'ul',
       {
-        attrs: { role: "listbox", "aria-labelledby": this.section.label && `${this.componentAttrIdAutosuggest}-${this.section.label}` },
-        class: this.section.ulClass
+        role: 'listbox', 'aria-labelledby': this.section.label && `${this.componentAttrIdAutosuggest}-${this.section.label}`,
+        class: this.section.ulClass,
       },
       [
-        before[0] && before[0] || this.section.label && <li class={beforeClassName} id={`${this.componentAttrIdAutosuggest}-${this.section.label}`}>{this.section.label}</li> || '',
+        (before[0] && before[0]) ||
+          (this.section.label && (
+            <li class={beforeClassName} id={`${this.componentAttrIdAutosuggest}-${this.section.label}`}>
+              {this.section.label}
+            </li>
+          )) ||
+          '',
         this.list.map((val, key) => {
-          const item = this.normalizeItemFunction(this.section.name, this.section.type, this.section.label, this.section.liClass, val)
-          const itemIndex = this.getItemIndex(key)
-          const isHighlighted = parseInt(this.currentIndex) === itemIndex
+          const item = this.normalizeItemFunction(this.section.name, this.section.type, this.section.label, this.section.liClass, val);
+          const itemIndex = this.getItemIndex(key);
+          const isHighlighted = parseInt(this.currentIndex) === itemIndex;
 
           return h(
-            "li",
+            'li',
             {
-              attrs: {
-                role: "option",
-                "data-suggestion-index": itemIndex,
-                "data-section-name": item.name,
-                id: `${componentAttrPrefix}__results-item--${itemIndex}`,
-                ...item.liAttributes
-              },
+              role: 'option',
+              'data-suggestion-index': itemIndex,
+              'data-section-name': item.name,
+              id: `${componentAttrPrefix}__results-item--${itemIndex}`,
+              ...item.liAttributes,
               key: itemIndex,
               class: {
                 [`${componentAttrPrefix}__results-item--highlighted`]: isHighlighted,
                 [`${componentAttrPrefix}__results-item`]: true,
-                ...item.liClass
+                ...item.liClass,
               },
-              on: {
-                mouseenter: this.onMouseEnter,
-                mouseleave: this.onMouseLeave
-              }
+              onMouseenter: this.onMouseEnter,
+              onMouseleave: this.onMouseLeave,
             },
-            [this.renderSuggestion ? this.renderSuggestion(item)
-              : this.$scopedSlots.default && this.$scopedSlots.default({
-                _key: key,
-                suggestion: item
-              })]
+            [
+              this.renderSuggestion
+                ? this.renderSuggestion(item)
+                : this.$slots.default &&
+                  this.$slots.default({
+                    _key: key,
+                    suggestion: item,
+                  }),
+            ]
           );
         }),
-        slots.afterSectionDefault && slots.afterSectionDefault({
-          section: this.section,
-          className: `${componentAttrPrefix}__results-after ${componentAttrPrefix}__results-after--${this.section.name}`
-        }),
-        slots.afterSectionNamed && slots.afterSectionNamed({
-          section: this.section,
-          className: `${componentAttrPrefix}__results_after ${componentAttrPrefix}__results-after--${this.section.name}`
-        })
+        slots.afterSectionDefault &&
+          slots.afterSectionDefault({
+            section: this.section,
+            className: `${componentAttrPrefix}__results-after ${componentAttrPrefix}__results-after--${this.section.name}`,
+          }),
+        slots.afterSectionNamed &&
+          slots.afterSectionNamed({
+            section: this.section,
+            className: `${componentAttrPrefix}__results_after ${componentAttrPrefix}__results-after--${this.section.name}`,
+          }),
       ]
     );
-  }
+  },
 };
 
 export default DefaultSection;

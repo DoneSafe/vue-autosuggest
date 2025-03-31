@@ -1,32 +1,39 @@
 <template>
   <div :id="componentAttrIdAutosuggest">
-    <slot name="before-input" /><div
+    <slot
+      v-if="$slots['before-input']"
+      name="before-input"
+    />
+    <div
       role="combobox"
       :aria-expanded="isOpen ? 'true' : 'false'"
       aria-haspopup="listbox"
       :aria-owns="`${componentAttrIdAutosuggest}-${componentAttrPrefix}__results`"
-    ><component
-      :is="internal_inputProps.is"
-      ref="textComponent"
-      :type="internal_inputProps.type"
-      :value.prop="internalValue"
-      :autocomplete="internal_inputProps.autocomplete"
-      :class="[isOpen ? `${componentAttrPrefix}__input--open` : '', internal_inputProps['class']]"
-      v-bind="internal_inputProps"
-      aria-autocomplete="list"
-      :aria-activedescendant="isOpen && currentIndex !== null ? `${componentAttrPrefix}__results-item--${currentIndex}` : ''"
-      :aria-controls="isOpen ? `${componentAttrIdAutosuggest}-${componentAttrPrefix}__results` : ''"
-      @input="inputHandler"
-      @keydown="handleKeyStroke"
-      v-on="listeners"
-    /></div><slot name="after-input" />
-    <mounting-portal
+    >
+      <component
+        :is="internal_inputProps.is"
+        ref="textComponent"
+        :type="internal_inputProps.type"
+        :value.prop="internalValue"
+        :autocomplete="internal_inputProps.autocomplete"
+        :class="[isOpen ? `${componentAttrPrefix}__input--open` : '', internal_inputProps['class']]"
+        v-bind="internal_inputProps"
+        aria-autocomplete="list"
+        :aria-activedescendant="isOpen && currentIndex !== null ? `${componentAttrPrefix}__results-item--${currentIndex}` : ''"
+        :aria-controls="isOpen ? `${componentAttrIdAutosuggest}-${componentAttrPrefix}__results` : ''"
+        @input.stop="inputHandler"
+        @keydown="handleKeyStroke"
+        v-on="listeners"
+      />
+    </div>
+    <slot
+      v-if="$slots['after-input']"
+      name="after-input"
+    />
+    <teleport
       v-if="isOpen"
-      :mount-to="resultsContainer"
+      :to="resultsContainer"
       :name="resultsContainer"
-      append
-      slim
-      target-slim
     >
       <div
         :id="`${componentAttrIdAutosuggest}-${componentAttrPrefix}__results`"
@@ -39,7 +46,10 @@
           :class="_componentAttrClassAutosuggestResults"
           :aria-labelledby="componentAttrIdAutosuggest"
         >
-          <slot name="before-suggestions" />
+          <slot
+            v-if="$slots['before-suggestions']"
+            name="before-suggestions"
+          />
           <component
             :is="cs.type"
             v-for="(cs, key) in computedSections"
@@ -51,55 +61,56 @@
             :section="cs"
             :component-attr-prefix="componentAttrPrefix"
             :component-attr-id-autosuggest="componentAttrIdAutosuggest"
-            @updateCurrentIndex="updateCurrentIndex"
+            @update-current-index="updateCurrentIndex"
           >
-            <template
-              :slot="`before-section-${cs.name || cs.label}`"
-              slot-scope="{section, className}"
-            >
+            <template #[`before-section-${slotNameAppend(cs)}`]="slotProps">
               <slot
-                :name="`before-section-${cs.name || cs.label}`"
-                :section="section"
-                :className="className"
+                v-if="$slots[`before-section-${slotNameAppend(cs)}`]"
+                :name="`before-section-${slotNameAppend(cs)}`"
+                :section="slotProps.section"
+                :class-name="slotProps.className"
               />
             </template>
-            <template slot-scope="{ suggestion, _key }">
+
+            <template #default="slotProps">
               <slot
-                :suggestion="suggestion"
-                :index="_key"
+                :suggestion="slotProps.suggestion"
+                :index="slotProps._key"
               >
-                {{ suggestion.item }}
+                {{ slotProps.suggestion.item }}
               </slot>
             </template>
-            <template
-              :slot="`after-section-${cs.name || cs.label}`"
-              slot-scope="{section}"
-            >
+            <template #[`after-section-${slotNameAppend(cs)}`]="slotProps">
               <slot
-                :name="`after-section-${cs.name || cs.label}`"
-                :section="section"
+                v-if="$slots[`after-section-${slotNameAppend(cs)}`]"
+                :name="`after-section-${slotNameAppend(cs)}`"
+                :section="slotProps.section"
               />
             </template>
-            <template
-              slot="after-section"
-              slot-scope="{section}"
-            >
+
+            <template #after-section="{ section }">
               <slot
+                v-if="$slots['after-section']"
                 name="after-section"
                 :section="section"
               />
             </template>
           </component>
-          <slot name="after-suggestions" />
+          <slot
+            v-if="$slots['after-suggestions']"
+            name="after-suggestions"
+          />
         </div>
-        <slot name="after-suggestions-container" />
+        <slot
+          v-if="$slots['after-suggestions-container']"
+          name="after-suggestions-container"
+        />
       </div>
-    </mounting-portal>
+    </teleport>
   </div>
 </template>
 
 <script>
-
 /**
  * @typedef {Object} ResultSection
  * @prop {String} name - Name of the section
@@ -121,66 +132,65 @@
  * @prop {ResultSection.type} type
  */
 
-import DefaultSection from "./parts/DefaultSection.js";
-import { addClass, removeClass, positionMenuAtCaret } from "./utils";
-
-const INDEX_IS_FOCUSED_ON_INPUT = -1
+import DefaultSection from './parts/DefaultSection.js';
+import { addClass, removeClass, positionMenuAtCaret } from './utils';
+const INDEX_IS_FOCUSED_ON_INPUT = -1;
 
 const defaultSectionConfig = {
-  name: "default",
-  type: "default-section"
-}
+  name: 'default',
+  type: 'default-section',
+};
 
 export default {
-  name: "Autosuggest",
+  name: 'Autosuggest',
   components: {
     /* eslint-disable-next-line vue/no-unused-components */
-    DefaultSection
+    DefaultSection,
   },
   props: {
     /** Allows for v-model support */
     value: {
       type: String,
-      default: null
+      default: null,
     },
     /** v-binds to the <input /> tag for fine-grain control */
     inputProps: {
       type: Object,
-      required: true
+      required: true,
     },
     /** limits the number of suggestions for all sections */
     limit: {
       type: Number,
       required: false,
-      default: Infinity
+      default: Infinity,
     },
     suggestions: {
       type: Array,
-      required: true
+      required: true,
     },
     renderSuggestion: {
       type: Function,
       required: false,
-      default: null
+      default: null,
     },
     getSuggestionValue: {
       type: Function,
       required: false,
-      default: suggestion => {
+      default: (suggestion) => {
         const item = suggestion.item;
-        if (typeof item === "object" && item.hasOwnProperty("name")) {
+        if (typeof item === 'object' && item.hasOwnProperty('name')) {
           return item.name;
         } else {
           return item;
         }
-      }
+      },
     },
     shouldRenderSuggestions: {
       type: Function,
       required: false,
       default: (totalResults, loading) => {
         return totalResults > 0 && !loading;
-      }
+      },
     },
     sectionConfigs: {
       type: Object,
@@ -188,35 +198,35 @@ export default {
       default: () => {
         return {
           default: {
-            onSelected: null
-          }
+            onSelected: null,
+          },
         };
-      }
+      },
     },
-    onSelected: {
-      type: Function,
-      required: false,
-      default: null
-    },
+    // onSelected: {
+    //   type: Function,
+    //   required: false,
+    //   default: null,
+    // },
     componentAttrIdAutosuggest: {
       type: String,
       required: false,
-      default: "autosuggest"
+      default: 'autosuggest',
     },
     componentAttrClassAutosuggestResultsContainer: {
       type: String,
       required: false,
-      default: null  // `${componentAttrPrefix}__results-container`
+      default: null, // `${componentAttrPrefix}__results-container`
     },
     componentAttrClassAutosuggestResults: {
       type: String,
       required: false,
-      default: null // `${componentAttrPrefix}__results`
+      default: null, // `${componentAttrPrefix}__results`
     },
     componentAttrPrefix: {
       type: String,
       required: false,
-      default: "autosuggest"
+      default: 'autosuggest',
     },
     resultsContainer: {
       type: String,
@@ -236,7 +246,7 @@ export default {
       didSelectFromOptions: false,
       defaultInputProps: {
         type: 'text',
-        autocomplete: "off",
+        autocomplete: 'off',
       },
       /** @type Number */
       clientXMouseDownInitial: null,
@@ -251,56 +261,52 @@ export default {
     internal_inputProps() {
       return {
         ...this.defaultInputProps,
-        ...this.inputProps
-      }
+        ...this.inputProps,
+      };
     },
     listeners() {
+      const listenersAttrs = Object.keys(this.$attrs).reduce((acc, key) => {
+        if (key.startsWith('on') && key !== 'onInput') {
+          acc[key] = this.$attrs[key];
+        }
+        return acc;
+      }, {});
+
       return {
-        ...this.$listeners,
-        input: e => {
-          // Don't do anything native here, since we have inputHandler
-          return
-        },
+        ...listenersAttrs,
         /**
          * Wrap native click handler to allow for added behavior
          */
-        click: () => {
+        onClick: () => {
           /* eslint-disable-next-line vue/no-side-effects-in-computed-properties */
           this.loading = false;
           this.setFocus(true);
-          this.$listeners.click && this.$listeners.click(this.currentItem);
+          this.$attrs.onClick && this.attrs.onClick(this.currentItem);
           this.$nextTick(() => {
             this.ensureItemVisible(this.currentItem, this.currentIndex);
-          })
+          });
         },
-        selected: () => {
+        onSelected: () => {
           /**
            * Determine which onSelected to fire. This can be either from inside
            * a section's object, from the `@selected` event
            */
-          if (
-            this.currentItem &&
-            this.sectionConfigs[this.currentItem.name] &&
-            this.sectionConfigs[this.currentItem.name].onSelected
-          ) {
-            this.sectionConfigs[this.currentItem.name].onSelected(
-              this.currentItem,
-              this.searchInputOriginal
-            );
-          } else if (this.sectionConfigs["default"].onSelected) {
-            this.sectionConfigs["default"].onSelected(null, this.searchInputOriginal);
-          } else if (this.$listeners.selected) {
+          if (this.currentItem && this.sectionConfigs[this.currentItem.name] && this.sectionConfigs[this.currentItem.name].onSelected) {
+            this.sectionConfigs[this.currentItem.name].onSelected(this.currentItem, this.searchInputOriginal);
+          } else if (this.sectionConfigs['default'].onSelected) {
+            this.sectionConfigs['default'].onSelected(null, this.searchInputOriginal);
+          } else if (this.$attrs.onSelected) {
             this.$emit('selected', this.currentItem, this.currentIndex);
           }
-          this.setChangeItem(null)
-        }
+          this.setChangeItem(null);
+        },
       };
     },
     /**
      * @returns {Boolean}
      */
     isOpen() {
-      return this.focus && this.shouldRenderSuggestions(this.totalResults, this.loading)
+      return this.focus && this.shouldRenderSuggestions(this.totalResults, this.loading);
     },
     /**
      * Normalize suggestions into sections based on defaults and section
@@ -308,25 +314,29 @@ export default {
      * @returns {Array<ResultSection>}
      */
     computedSections() {
-      let tmpSize = 0
-      return this.suggestions.map(section => {
+      let tmpSize = 0;
+      return this.suggestions.map((section) => {
         if (!section.data) return;
 
         const name = section.name ? section.name : defaultSectionConfig.name;
-        let limit, label, type, ulClass, liClass = null
+        let limit,
+          label,
+          type,
+          ulClass,
+          liClass = null;
 
         if (this.sectionConfigs[name]) {
-          limit = this.sectionConfigs[name].limit
-          type = this.sectionConfigs[name].type
-          label = this.sectionConfigs[name].label
-          ulClass = this.sectionConfigs[name].ulClass
-          liClass = this.sectionConfigs[name].liClass
+          limit = this.sectionConfigs[name].limit;
+          type = this.sectionConfigs[name].type;
+          label = this.sectionConfigs[name].label;
+          ulClass = this.sectionConfigs[name].ulClass;
+          liClass = this.sectionConfigs[name].liClass;
         }
 
         /** Set defaults for section configs. */
         type = type ? type : defaultSectionConfig.type;
 
-        limit = limit || this.limit
+        limit = limit || this.limit;
         limit = limit ? limit : Infinity;
         limit = section.data.length < limit ? section.data.length : limit;
         label = label ? label : section.label;
@@ -340,34 +350,34 @@ export default {
           start_index: tmpSize,
           end_index: tmpSize + limit - 1,
           ulClass,
-          liClass
-        }
+          liClass,
+        };
 
         tmpSize += limit;
 
-        return computedSection
-      })
+        return computedSection;
+      });
     },
     /**
      * Calculate number of results in each section.
      * @returns {Number}
      */
-    totalResults () {
+    totalResults() {
       return this.computedSections.reduce((acc, section) => {
         // For each section, make sure we calculate the size
         // based on how many are rendered, which maxes out at
         // the limit but can be less than the limit.
-        if (!section) return acc
-        const { limit, data } = section
-        return acc + (data.length >= limit ? limit : data.length)
-      }, 0)
+        if (!section) return acc;
+        const { limit, data } = section;
+        return acc + (data.length >= limit ? limit : data.length);
+      }, 0);
     },
 
-    _componentAttrClassAutosuggestResultsContainer () {
-      return this.componentAttrClassAutosuggestResultsContainer || `${this.componentAttrPrefix}__results-container`
+    _componentAttrClassAutosuggestResultsContainer() {
+      return this.componentAttrClassAutosuggestResultsContainer || `${this.componentAttrPrefix}__results-container`;
     },
-    _componentAttrClassAutosuggestResults () {
-      return this.componentAttrClassAutosuggestResults || `${this.componentAttrPrefix}__results`
+    _componentAttrClassAutosuggestResults() {
+      return this.componentAttrClassAutosuggestResults || `${this.componentAttrPrefix}__results`;
     },
   },
   watch: {
@@ -375,42 +385,39 @@ export default {
      * Support initialValue
      */
     value: {
-      handler(newValue){
-        this.internalValue = newValue
+      handler(newValue) {
+        this.internalValue = newValue;
       },
-      immediate: true
+      immediate: true,
     },
     /**
      * Emits opened/closed events
      * @returns {Boolean}
      */
     isOpen: {
-      handler(newValue, oldValue){
+      handler(newValue, oldValue) {
         if (newValue !== oldValue) {
           this.$emit(newValue ? 'opened' : 'closed');
         }
         // Calculates the styles for the results menu once 'isOpen' is true and
         // renders results menu next to the cursor position or if a cursor position is too close to the screen edges the next best position
         if (newValue) {
-          this.resultsStyle = positionMenuAtCaret(
-            this.$refs.textComponent,
-            this.internal_inputProps.position,
-          );
+          this.resultsStyle = positionMenuAtCaret(this.$refs.textComponent, this.internal_inputProps.position);
         }
       },
-      immediate: true
+      immediate: true,
     },
   },
   created() {
     this.loading = true;
   },
   mounted() {
-    document.addEventListener("mouseup", this.onDocumentMouseUp);
-    document.addEventListener("mousedown", this.onDocumentMouseDown);
+    document.addEventListener('mouseup', this.onDocumentMouseUp);
+    document.addEventListener('mousedown', this.onDocumentMouseDown);
   },
-  beforeDestroy() {
-    document.removeEventListener("mouseup", this.onDocumentMouseUp)
-    document.removeEventListener("mousedown", this.onDocumentMouseDown)
+  beforeUnmount() {
+    document.removeEventListener('mouseup', this.onDocumentMouseUp);
+    document.removeEventListener('mousedown', this.onDocumentMouseDown);
   },
   methods: {
     /**
@@ -418,9 +425,9 @@ export default {
      * @param {InputEvent} e
      */
     inputHandler(e) {
-      const newValue = e.target.value
-      this.$emit('input', newValue)
-      this.internalValue = newValue
+      const newValue = e.target.value;
+      this.$emit('input', newValue);
+      this.internalValue = newValue;
       this.setFocus(true);
       if (!this.didSelectFromOptions) {
         this.searchInputOriginal = newValue;
@@ -432,7 +439,7 @@ export default {
      * @returns {String}
      */
     getSectionRef(i) {
-      return "computed_section_" + i;
+      return 'computed_section_' + i;
     },
     /**
      * Helper for getting a suggestion item by index.
@@ -441,14 +448,11 @@ export default {
     getItemByIndex(index) {
       let obj = false;
       if (index === null) return obj;
-      for (var i = 0; i < this.computedSections.length; i++) {
-        if (
-          index >= this.computedSections[i].start_index &&
-          index <= this.computedSections[i].end_index
-        ) {
-          let trueIndex = index - this.computedSections[i].start_index;
-          const sectionName = this.computedSections[i].name
-          let childSection = this.$refs[this.getSectionRef(`${sectionName}${i}`)][0];
+      for (let i = 0; i < this.computedSections.length; i++) {
+        if (index >= this.computedSections[i].start_index && index <= this.computedSections[i].end_index) {
+          const trueIndex = index - this.computedSections[i].start_index;
+          const sectionName = this.computedSections[i].name;
+          const childSection = this.$refs[this.getSectionRef(`${sectionName}${i}`)][0];
           if (childSection) {
             obj = this.normalizeItem(
               this.computedSections[i].name,
@@ -476,18 +480,18 @@ export default {
 
       const ignoredKeyCodes = [
         16, // Shift
-        9,  // Tab
+        9, // Tab
         17, // ctrl
         18, // alt/option
         91, // OS Key
-        93  // Right OS Key
+        93, // Right OS Key
       ];
 
       if (ignoredKeyCodes.indexOf(keyCode) > -1) {
         return;
       }
 
-      const wasClosed = !this.isOpen
+      const wasClosed = !this.isOpen;
       this.loading = false;
       this.didSelectFromOptions = false;
       if (this.isOpen || [37, 39].includes(keyCode)) {
@@ -515,7 +519,7 @@ export default {
 
             this.$nextTick(() => {
               this.ensureItemVisible(this.currentItem, this.currentIndex);
-            })
+            });
             break;
           case 13: // Enter
             e.preventDefault();
@@ -526,7 +530,7 @@ export default {
             }
 
             this.loading = true;
-            this.listeners.selected(this.didSelectFromOptions);
+            this.listeners.onSelected(this.didSelectFromOptions);
             break;
           case 27: // Escape
             this.setFocus(false);
@@ -557,11 +561,11 @@ export default {
     setChangeItem(item, overrideOriginalInput = false) {
       if (this.currentIndex === null || !item) {
         this.currentItem = null;
-        this.$emit('item-changed', null, null)
+        this.$emit('item-changed', null, null);
       } else if (item) {
         this.currentItem = item;
-        this.$emit('item-changed', item, this.currentIndex)
-        const v = this.getSuggestionValue(item)
+        this.$emit('item-changed', item, this.currentIndex);
+        const v = this.getSuggestionValue(item);
         this.internalValue = v;
         if (overrideOriginalInput) {
           this.searchInputOriginal = v;
@@ -580,7 +584,7 @@ export default {
         type,
         label,
         liClass: item.liClass || className,
-        item
+        item,
       };
     },
 
@@ -596,7 +600,7 @@ export default {
       );
 
       if (!resultsScrollElement) {
-        return
+        return;
       }
 
       const itemElement = resultsScrollElement.querySelector(`#${this.componentAttrPrefix}__results-item--${index}`);
@@ -610,10 +614,7 @@ export default {
       const itemHeight = itemElement.clientHeight;
       const currentItemScrollOffset = itemElement.offsetTop;
 
-      if (
-        itemHeight + currentItemScrollOffset >=
-        resultsScrollScrollTop + resultsScrollWindowHeight
-      ) {
+      if (itemHeight + currentItemScrollOffset >= resultsScrollScrollTop + resultsScrollWindowHeight) {
         /** Current item goes below visible scroll window */
         resultsScrollElement.scrollTop = itemHeight + currentItemScrollOffset - resultsScrollWindowHeight;
       } else if (currentItemScrollOffset < resultsScrollScrollTop && resultsScrollScrollTop > 0) {
@@ -633,12 +634,11 @@ export default {
      * @param {Number} mouseX - horizontal position of the mouse relative to
      *   results e.g. an offset of clientX
      */
-    clickedOnScrollbar(e, mouseX){
+    clickedOnScrollbar(e, mouseX) {
       const results = document.querySelector(`${this.resultsContainer} .${this._componentAttrClassAutosuggestResults}`);
 
-      const mouseIsInsideScrollbar = results && results.clientWidth <= (mouseX + 17) &&
-        mouseX + 17 <= results.clientWidth + 34
-      return e.target.tagName === 'DIV' && results && mouseIsInsideScrollbar || false;
+      const mouseIsInsideScrollbar = results && results.clientWidth <= mouseX + 17 && mouseX + 17 <= results.clientWidth + 34;
+      return (e.target.tagName === 'DIV' && results && mouseIsInsideScrollbar) || false;
     },
     /**
      * Capture mousedown position so we can use it to detect if the scrollbar
@@ -646,7 +646,7 @@ export default {
      * @param {MouseEvent} e
      */
     onDocumentMouseDown(e) {
-      var rect = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : 0;
+      const rect = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : 0;
       this.clientXMouseDownInitial = e.clientX - rect.left;
     },
     /**
@@ -655,22 +655,19 @@ export default {
      */
     onDocumentMouseUp(e) {
       /** Do not re-render list on input click  */
-      const results = document.querySelector(`${this.resultsContainer} .${this._componentAttrClassAutosuggestResults}`)
-      const isChild =
-          this.$el.contains(e.target) ||
-          (!!results ? results.contains(e.target) : false);
+      const results = document.querySelector(`${this.resultsContainer} .${this._componentAttrClassAutosuggestResults}`);
+      const isChild = this.$el.contains(e.target) || (!!results ? results.contains(e.target) : false);
 
       /* Clicks outside of dropdown */
       if (!isChild) {
         this.loading = true;
         this.currentIndex = null;
         this.setFocus(false);
-        this.$emit('click-outside')
+        this.$emit('click-outside');
         return;
       }
 
-      if (e.target.tagName === 'INPUT' ||
-        (this.clickedOnScrollbar(e, this.clientXMouseDownInitial))) {
+      if (e.target.tagName === 'INPUT' || this.clickedOnScrollbar(e, this.clientXMouseDownInitial)) {
         return;
       }
 
@@ -678,7 +675,7 @@ export default {
       this.loading = true;
       this.didSelectFromOptions = true;
       this.setChangeItem(this.getItemByIndex(this.currentIndex), true);
-      this.listeners.selected(true);
+      this.listeners.onSelected(true);
     },
     /**
      * Sets the current index of the highlighted object, useful for aria
@@ -695,8 +692,8 @@ export default {
        * If you're not hovering, you might be keying outside of the bounds, so
        * we need to make sure that we adjust for the limits.
        */
-      if (!onHover){
-        const hitUpperLimit = newIndex >= limit
+      if (!onHover) {
+        const hitUpperLimit = newIndex >= limit;
         if (hitUpperLimit) {
           adjustedValue = 0;
         }
@@ -714,13 +711,22 @@ export default {
       }
     },
     /**
-       * Sets the focus state of the component
-       * if state is 'false', the menu with results will be closed.
-       * @param {Boolean} state - state to set
-       */
-      setFocus(state) {
-        this.focus = state;
-      },
+     * Sets the focus state of the component
+     * if state is 'false', the menu with results will be closed.
+     * @param {Boolean} state - state to set
+     */
+    setFocus(state) {
+      this.focus = state;
+    },
+    /**
+     * @param {ResultSection} cs
+     */
+    slotNameAppend(cs) {
+      if (cs.name) return cs.name;
+      if (cs.label) return cs.label;
+
+      return '';
+    },
   },
 };
 </script>
