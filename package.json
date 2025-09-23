@@ -139,5 +139,6 @@
   },
   "dependencies": {
     "portal-vue": "^2.1.7"
-  }
+  },
+  "packageManager": "yarn@4.10.2"
 }
