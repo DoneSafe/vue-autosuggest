@@ -1,5 +1,3 @@
-import { h } from 'vue';
-
 const DefaultSection = {
   name: 'default-section',
   props: {
@@ -46,12 +44,12 @@ const DefaultSection = {
     },
   },
   // eslint-disable-next-line no-unused-vars
-  render() {
+  render(h) {
     const componentAttrPrefix = this.componentAttrPrefix;
     const slots = {
-      beforeSection: this.$slots[`before-section-${this.section.name}`],
-      afterSectionDefault: this.$slots[`after-section`],
-      afterSectionNamed: this.$slots[`after-section-${this.section.name}`],
+      beforeSection: this.$scopedSlots[`before-section-${this.section.name}`],
+      afterSectionDefault: this.$scopedSlots[`after-section`],
+      afterSectionNamed: this.$scopedSlots[`after-section-${this.section.name}`],
     };
 
     const beforeClassName = `${componentAttrPrefix}__results-before ${componentAttrPrefix}__results-before--${this.section.name}`;
@@ -66,7 +64,7 @@ const DefaultSection = {
     return h(
       'ul',
       {
-        role: 'listbox', 'aria-labelledby': this.section.label && `${this.componentAttrIdAutosuggest}-${this.section.label}`,
+        attrs: { role: 'listbox', 'aria-labelledby': this.section.label && `${this.componentAttrIdAutosuggest}-${this.section.label}` },
         class: this.section.ulClass,
       },
       [
@@ -85,25 +83,29 @@ const DefaultSection = {
           return h(
             'li',
             {
-              role: 'option',
-              'data-suggestion-index': itemIndex,
-              'data-section-name': item.name,
-              id: `${componentAttrPrefix}__results-item--${itemIndex}`,
-              ...item.liAttributes,
+              attrs: {
+                role: 'option',
+                'data-suggestion-index': itemIndex,
+                'data-section-name': item.name,
+                id: `${componentAttrPrefix}__results-item--${itemIndex}`,
+                ...item.liAttributes,
+              },
               key: itemIndex,
               class: {
                 [`${componentAttrPrefix}__results-item--highlighted`]: isHighlighted,
                 [`${componentAttrPrefix}__results-item`]: true,
                 ...item.liClass,
               },
-              onMouseenter: this.onMouseEnter,
-              onMouseleave: this.onMouseLeave,
+              on: {
+                mouseenter: this.onMouseEnter,
+                mouseleave: this.onMouseLeave,
+              },
             },
             [
               this.renderSuggestion
                 ? this.renderSuggestion(item)
-                : this.$slots.default &&
-                  this.$slots.default({
+                : this.$scopedSlots.default &&
+                  this.$scopedSlots.default({
                     _key: key,
                     suggestion: item,
                   }),
