@@ -1,4 +1,5 @@
 const path = require("path");
+const { VueLoaderPlugin } = require("vue-loader");
 const eslintFriendlyFormatter = require("eslint-friendly-formatter");
 
 module.exports = {
@@ -7,9 +8,8 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.js$/,
-                exclude: /node_modules/,
                 test: /\.(js|vue)$/,
+                exclude: /node_modules/,
                 loader: "eslint-loader",
                 enforce: "pre",
                 options: {
@@ -26,16 +26,24 @@ module.exports = {
             },
             {
                 test: /\.vue$/,
-                loaders: ["vue-loader"],
+                use: ["vue-loader"],
                 exclude: /node_modules/
+            },
+            {
+                test: /\.css$/,
+                use: ["style-loader", "css-loader"]
             }
         ]
     },
 
+    plugins: [
+        new VueLoaderPlugin()
+    ],
+
     resolve: {
         extensions: [".js", ".vue"],
         alias: {
-            vue: "vue/dist/vue.js"
+            vue: "vue/dist/vue.esm-bundler.js"
         }
     },
 

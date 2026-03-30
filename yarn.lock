@@ -18036,6 +18036,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"style-loader@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "style-loader@npm:4.0.0"
+  peerDependencies:
+    webpack: ^5.27.0
+  checksum: 10c0/214bc0f3b018f8c374f79b9fa16da43df78c7fef2261e9a99e36c2f8387601fad10ac75a171aa8edba75903db214bc46952ae08b94a1f8544bd146c2c8d07d27
+  languageName: node
+  linkType: hard
+
 "supports-color@npm:^0.2.0":
   version: 0.2.0
   resolution: "supports-color@npm:0.2.0"
@@ -19321,6 +19330,7 @@ __metadata:
     rollup-plugin-uglify: "npm:^6.0.4"
     rollup-plugin-vue: "npm:6"
     sinon: "npm:4.1.2"
+    style-loader: "npm:^4.0.0"
     vue: "npm:3"
     vue-jest: "npm:2.6.0"
     vue-loader: "npm:^17.4.2"
