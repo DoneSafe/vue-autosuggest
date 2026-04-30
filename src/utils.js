@@ -22,12 +22,12 @@ const positionMenuAtCaret = (textComponent, position) =>  {
 
   const menuStyles = {
     top: `${coordinates.top}px`,
-    left: `${coordinates.left + window.pageXOffset}px`,
+    left: `${coordinates.left}px`,
     right: coordinates.right ? `${coordinates.right}px` : '',
     bottom: coordinates.bottom ? `${coordinates.bottom}px` : '',
     'max-height': `${RESULTS_MENU_MAX_HEIGHT}px`,
     'max-width': `${RESULTS_MENU_MAX_WIDTH}px`,
-    position: 'absolute',
+    position: 'fixed',
     display: `block`,
   };
 
@@ -136,7 +136,7 @@ const getFixedCoordinatesRelativeToRect = (rect) => {
   const coordinates = {
     position: 'fixed',
     left: rect.left,
-    top: rect.top + rect.height + window.pageYOffset,
+    top: rect.top + rect.height,
   };
 
   const menuDimensions = getMenuDimensions();
@@ -148,7 +148,7 @@ const getFixedCoordinatesRelativeToRect = (rect) => {
   if (availableSpaceOnBottom < menuDimensions.height) {
     if (availableSpaceOnTop >= menuDimensions.height || availableSpaceOnTop > availableSpaceOnBottom) {
       coordinates.top = 'auto';
-      coordinates.bottom = rect.height + availableSpaceOnBottom - window.pageYOffset;
+      coordinates.bottom = rect.height + availableSpaceOnBottom;
       if (availableSpaceOnBottom < menuDimensions.height) {
         coordinates.maxHeight = availableSpaceOnTop;
       }

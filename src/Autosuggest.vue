@@ -392,10 +392,10 @@ export default {
         // Calculates the styles for the results menu once 'isOpen' is true and
         // renders results menu next to the cursor position or if a cursor position is too close to the screen edges the next best position
         if (newValue) {
-          this.resultsStyle = positionMenuAtCaret(
-            this.$refs.textComponent,
-            this.internal_inputProps.position,
-          );
+          this.updateResultsPosition();
+          this.addScrollListeners();
+        } else {
+          this.removeScrollListeners();
         }
       },
       immediate: true
@@ -411,8 +411,28 @@ export default {
   beforeDestroy() {
     document.removeEventListener("mouseup", this.onDocumentMouseUp)
     document.removeEventListener("mousedown", this.onDocumentMouseDown)
+    this.removeScrollListeners();
   },
   methods: {
+    updateResultsPosition() {
+      this.resultsStyle = positionMenuAtCaret(
+        this.$refs.textComponent,
+        this.internal_inputProps.position,
+      );
+    },
+    onScroll() {
+      if (this.isOpen) {
+        this.updateResultsPosition();
+      }
+    },
+    addScrollListeners() {
+      document.addEventListener('scroll', this.onScroll, true);
+      window.addEventListener('resize', this.onScroll);
+    },
+    removeScrollListeners() {
+      document.removeEventListener('scroll', this.onScroll, true);
+      window.removeEventListener('resize', this.onScroll);
+    },
     /**
      * handler for @input <input /> events to support v-model behavior.
      * @param {InputEvent} e
